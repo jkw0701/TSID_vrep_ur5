@@ -23,21 +23,29 @@ class RobotState:
         self.q = q
         self.qdot = qdot
         self.robot.forwardKinematics(q, qdot)
-       
+        self.Rot_ee[0:3,0:3] = self.data.oMi[6].rotation
+        self.Rot_ee[3:6,3:6] = self.data.oMi[6].rotation       
+
+
     def jointJacobian(self, q, frame_id):
         J = self.robot.jointJacobian(q, frame_id)
         # local to global Jacobian
-        self.Rot_ee[0:3,0:3] = self.data.oMi[frame_id].rotation
-        self.Rot_ee[3:6,3:6] = self.data.oMi[frame_id].rotation
         J = self.Rot_ee*J
         return J 
 
+    def jointLinearVelocity(self, q, v, frame_id):
+        vel = self.robot.velocity(q, v, frame_id)
+        linear_vel = self.data.oMi[frame_id].rotation*vel.linear
+        return linear_vel    
+
+    def jointAngularVelocity(self, q, v, frame_id):
+        vel = self.robot.velocity(q, v, frame_id)
+        angular_vel = self.data.oMi[frame_id].rotation*vel.angular
+        return angular_vel  
+
     # frame_id does not matter
     def frameJacobian(self, q, frame_id): # local frame
-        for index in range(15, 21):
-            print(index)
-            J = self.robot.frameJacobian(q, index)
-            print(J)
+        J = self.robot.frameJacobian(q, index)
         return J 
 
     def jointPosition(self, joint_id):

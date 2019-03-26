@@ -28,7 +28,7 @@ exit_flag = False
 is_first = True
 kbd = kbhit.KBHit()
 qdes = np.array(np.zeros(6))
-#qdes = np.array([0.1, -1.57, 0.3, 0.4, 0.5, 0.6]) 
+qdes = np.array([0.1, -1.57, 0.3, 0.4, 0.5, 0.6]) 
 
 tdes = np.array(np.zeros(6))
 err = np.matrix(np.zeros(6)).T
@@ -69,14 +69,15 @@ while not exit_flag:
             vrep.doNextStep=False  
             q, qdot = vrep.getMotorState() #Read Device
 
+            # PD control
             ee = robot.framePosition(np.asmatrix(q).T, 17) # SE3
-            ee_vel = robot.frameVelocity(np.asmatrix(q).T, np.asmatrix(qdot).T, 6)
-            xdes = np.matrix([0.6448, 0.1091, 0.59]).T
+            ee_vel = robot.jointLinearVelocity(np.asmatrix(q).T, np.asmatrix(qdot).T, 6)
+            xdes = np.matrix([0.6448, 0.1091, 0.40]).T
 
+            err = 400*(xdes - ee.translation) - 40*ee_vel
 
-            err = 50*(xdes - ee.translation) - 10*ee_vel.linear
+            # Model information
             J = robot.jointJacobian(np.asmatrix(q).T, 6)[:3,:]
-
             g = robot.getGravity(np.asmatrix(q).T)
             nle = robot.getNonlinear(np.asmatrix(q).T, np.asmatrix(qdot).T)
             mass = robot.getMass(np.asmatrix(q).T)
@@ -84,13 +85,15 @@ while not exit_flag:
             # joint space control 
             kp = 200.0
             qqdot = kp*(np.asmatrix(qdes).T - np.asmatrix(q).T) - 2.0*np.sqrt(kp)*np.asmatrix(qdot).T
-            #tdes = mass*qqdot + nle
+            tdes = mass*qqdot + nle
 
 
             # operational space control
-            lambda_inv = J*np.linalg.inv(mass)*J.T
+            lambda_inv = J*np.linalg.inv(mass)*J.T + 0.001*np.eye(3) # damped pseudo-inverse
             lambda_ = np.linalg.inv(lambda_inv)
-            tdes = J.T*lambda_*err + nle
+            tdes = J.T*lambda_*err + nle - 0.5*np.asmatrix(qdot).T
+
+            # Update Kinematics & Set motor input
             robot.updateKinematics(np.asmatrix(q).T, np.asmatrix(qdot).T)
             vrep.setMotorState(np.asarray(tdes).T)   
             

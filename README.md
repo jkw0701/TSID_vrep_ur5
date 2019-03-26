@@ -1,6 +1,8 @@
 # vrep-python-test
-# Joint space Torque control
-# Operational space Torque control (only position)
+
+Purpose :
+Joint space Torque control
+Operational space Torque control (only position)
 
 
 1. Download and extract recent V-REP PRO/DEU (Hereafter, vrep folder)
